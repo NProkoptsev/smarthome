@@ -49,9 +49,6 @@ public class SonosBindingConstants {
 
     // List of all Channel ids
     public final static String ADD = "add";
-    public final static String ALARM = "alarm";
-    public final static String ALARMPROPERTIES = "alarmproperties";
-    public final static String ALARMRUNNING = "alarmrunning";
     public final static String CONTROL = "control";
     public final static String CURRENTALBUM = "currentalbum";
     public final static String CURRENTALBUMART = "currentalbumart";

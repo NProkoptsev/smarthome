@@ -76,26 +76,6 @@ public class SonosXMLParser {
 
     /**
      * @param xml
-     * @return a list of alarms from the given xml string.
-     * @throws IOException
-     * @throws SAXException
-     */
-    public static List<SonosAlarm> getAlarmsFromStringResult(String xml) {
-        AlarmHandler handler = new AlarmHandler();
-        try {
-            XMLReader reader = XMLReaderFactory.createXMLReader();
-            reader.setContentHandler(handler);
-            reader.parse(new InputSource(new StringReader(xml)));
-        } catch (IOException e) {
-            logger.error("Could not parse Alarms from string '{}'", xml);
-        } catch (SAXException s) {
-            logger.error("Could not parse Alarms from string '{}'", xml);
-        }
-        return handler.getAlarms();
-    }
-
-    /**
-     * @param xml
      * @return a list of Entries from the given xml string.
      * @throws IOException
      * @throws SAXException
@@ -429,84 +409,6 @@ public class SonosXMLParser {
 
         public SonosResourceMetaData getMetaData() {
             return metaData;
-        }
-    }
-
-    static private class AlarmHandler extends DefaultHandler {
-
-        private String id;
-        private String startTime;
-        private String duration;
-        private String recurrence;
-        private String enabled;
-        private String roomUUID;
-        private String programURI;
-        private String programMetaData;
-        private String playMode;
-        private String volume;
-        private String includeLinkedZones;
-
-        private List<SonosAlarm> alarms = new ArrayList<SonosAlarm>();
-
-        AlarmHandler() {
-            // shouldn't be used outside of this package.
-        }
-
-        @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes)
-                throws SAXException {
-
-            if (qName.equals("Alarm")) {
-                id = attributes.getValue("ID");
-                duration = attributes.getValue("Duration");
-                recurrence = attributes.getValue("Recurrence");
-                startTime = attributes.getValue("StartTime");
-                enabled = attributes.getValue("Enabled");
-                roomUUID = attributes.getValue("RoomUUID");
-                programURI = attributes.getValue("ProgramURI");
-                programMetaData = attributes.getValue("ProgramMetaData");
-                playMode = attributes.getValue("PlayMode");
-                volume = attributes.getValue("Volume");
-                includeLinkedZones = attributes.getValue("IncludeLinkedZones");
-            }
-        }
-
-        @Override
-        public void endElement(String uri, String localName, String qName) throws SAXException {
-
-            if (qName.equals("Alarm")) {
-
-                int finalID = 0;
-                int finalVolume = 0;
-                boolean finalEnabled = false;
-                boolean finalIncludeLinkedZones = false;
-
-                try {
-                    finalID = Integer.parseInt(id);
-                    finalVolume = Integer.parseInt(volume);
-                    if (enabled.equals("0")) {
-                        finalEnabled = false;
-                    } else {
-                        finalEnabled = true;
-                    }
-
-                    if (includeLinkedZones.equals("0")) {
-                        finalIncludeLinkedZones = false;
-                    } else {
-                        finalIncludeLinkedZones = true;
-                    }
-                } catch (Exception e) {
-                    logger.debug("Error parsing Integer");
-                }
-
-                alarms.add(new SonosAlarm(finalID, startTime, duration, recurrence, finalEnabled, roomUUID, programURI,
-                        programMetaData, playMode, finalVolume, finalIncludeLinkedZones));
-            }
-
-        }
-
-        public List<SonosAlarm> getAlarms() {
-            return alarms;
         }
     }
 

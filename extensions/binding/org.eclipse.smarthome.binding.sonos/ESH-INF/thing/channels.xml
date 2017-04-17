@@ -10,24 +10,6 @@
 		<description>Add a Zone Player to the group of the given Zone Player</description>
 	</channel-type>
 
-	<channel-type id="alarm" advanced="true">
-		<item-type>Switch</item-type>
-		<label>Set Alarm</label>
-		<description>Set the first occurring alarm either ON or OFF. Alarms have first have to be defined through the Sonos Controller app</description>
-	</channel-type>
-
-	<channel-type id="alarmproperties" advanced="true">
-		<item-type>String</item-type>
-		<label>Alarm Properties</label>
-		<description>Properties of the alarm currently running</description>
-	</channel-type>
-
-	<channel-type id="alarmrunning" advanced="true">
-		<item-type>Switch</item-type>
-		<label>Alarm is running</label>
-		<description>Set to ON if the alarm was triggered</description>
-	</channel-type>
-
 	<channel-type id="control">
 		<item-type>Player</item-type>
 		<label>Control</label>
@@ -172,12 +154,6 @@
 		<item-type>Switch</item-type>
 		<label>Save All</label>
 		<description>Save the state of all the Zone Players</description>
-	</channel-type>
-
-	<channel-type id="snooze" advanced="true">
-		<item-type>Number</item-type>
-		<label>Snooze</label>
-		<description>Snooze the running alarm, if any, with the given number of minutes</description>
 	</channel-type>
 
 	<channel-type id="standalone" advanced="true">

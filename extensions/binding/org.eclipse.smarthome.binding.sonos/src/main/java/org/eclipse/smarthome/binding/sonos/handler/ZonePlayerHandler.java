@@ -15,18 +15,13 @@ import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +29,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.smarthome.binding.sonos.SonosBindingConstants;
 import org.eclipse.smarthome.binding.sonos.config.ZonePlayerConfiguration;
-import org.eclipse.smarthome.binding.sonos.internal.SonosAlarm;
 import org.eclipse.smarthome.binding.sonos.internal.SonosEntry;
 import org.eclipse.smarthome.binding.sonos.internal.SonosMetaData;
 import org.eclipse.smarthome.binding.sonos.internal.SonosXMLParser;
@@ -161,7 +155,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 addSubscription();
 
                 updateZoneInfo();
-                updateRunningAlarmProperties();
                 updateLed();
                 updateSleepTimerDuration();
             } catch (Exception e) {
@@ -262,12 +255,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                     break;
                 case FAVORITE:
                     playFavorite(command);
-                    break;
-                case ALARM:
-                    setAlarm(command);
-                    break;
-                case SNOOZE:
-                    snoozeAlarm(command);
                     break;
                 case SAVEALL:
                     saveAllPlayerState();
@@ -451,12 +438,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                 case "LineInConnected":
                 case "TOSLinkConnected":
                     updateChannel(LINEIN);
-                    break;
-                case "AlarmRunning":
-                    updateChannel(ALARMRUNNING);
-                    break;
-                case "RunningAlarmProperties":
-                    updateChannel(ALARMPROPERTIES);
                     break;
                 case "CurrentURIFormatted":
                     updateChannel(CURRENTTRACK);
@@ -653,16 +634,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
                     newState = stateMap.get("TOSLinkConnected").equals("true") ? OnOffType.ON : OnOffType.OFF;
                 }
                 break;
-            case ALARMRUNNING:
-                if (stateMap.get("AlarmRunning") != null) {
-                    newState = stateMap.get("AlarmRunning").equals("1") ? OnOffType.ON : OnOffType.OFF;
-                }
-                break;
-            case ALARMPROPERTIES:
-                if (stateMap.get("RunningAlarmProperties") != null) {
-                    newState = new StringType(stateMap.get("RunningAlarmProperties"));
-                }
-                break;
             case CURRENTTRACK:
                 if (stateMap.get("CurrentURIFormatted") != null) {
                     newState = new StringType(stateMap.get("CurrentURIFormatted"));
@@ -854,34 +825,8 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
         }
     }
 
-    protected void updateTime() {
-        Map<String, String> result = service.invokeAction(this, "AlarmClock", "GetTimeNow", null);
-
-        for (String variable : result.keySet()) {
-            this.onValueReceived(variable, result.get(variable), "AlarmClock");
-        }
-    }
-
     protected void updatePosition() {
         Map<String, String> result = service.invokeAction(this, "AVTransport", "GetPositionInfo", null);
-
-        for (String variable : result.keySet()) {
-            this.onValueReceived(variable, result.get(variable), "AVTransport");
-        }
-    }
-
-    protected void updateRunningAlarmProperties() {
-        Map<String, String> result = service.invokeAction(this, "AVTransport", "GetRunningAlarmProperties", null);
-
-        String alarmID = result.get("AlarmID");
-        String loggedStartTime = result.get("LoggedStartTime");
-        String newStringValue = null;
-        if (alarmID != null && loggedStartTime != null) {
-            newStringValue = alarmID + " - " + loggedStartTime;
-        } else {
-            newStringValue = "No running alarm";
-        }
-        result.put("RunningAlarmProperties", newStringValue);
 
         for (String variable : result.keySet()) {
             this.onValueReceived(variable, result.get(variable), "AVTransport");
@@ -1917,163 +1862,9 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
         }
     }
 
-    public List<SonosAlarm> getCurrentAlarmList() {
-        Map<String, String> result = service.invokeAction(this, "AlarmClock", "ListAlarms", null);
-
-        for (String variable : result.keySet()) {
-            this.onValueReceived(variable, result.get(variable), "AlarmClock");
-        }
-
-        return SonosXMLParser.getAlarmsFromStringResult(result.get("CurrentAlarmList"));
-    }
-
-    public void updateAlarm(SonosAlarm alarm) {
-        if (alarm != null) {
-
-            Map<String, String> inputs = new HashMap<String, String>();
-
-            try {
-                inputs.put("ID", Integer.toString(alarm.getID()));
-                inputs.put("StartLocalTime", alarm.getStartTime());
-                inputs.put("Duration", alarm.getDuration());
-                inputs.put("Recurrence", alarm.getRecurrence());
-                inputs.put("RoomUUID", alarm.getRoomUUID());
-                inputs.put("ProgramURI", alarm.getProgramURI());
-                inputs.put("ProgramMetaData", alarm.getProgramMetaData());
-                inputs.put("PlayMode", alarm.getPlayMode());
-                inputs.put("Volume", Integer.toString(alarm.getVolume()));
-                if (alarm.getIncludeLinkedZones()) {
-                    inputs.put("IncludeLinkedZones", "1");
-                } else {
-                    inputs.put("IncludeLinkedZones", "0");
-                }
-
-                if (alarm.getEnabled()) {
-                    inputs.put("Enabled", "1");
-                } else {
-                    inputs.put("Enabled", "0");
-                }
-            } catch (NumberFormatException ex) {
-                logger.error("Action Invalid Value Format Exception {}", ex.getMessage());
-            }
-
-            Map<String, String> result = service.invokeAction(this, "AlarmClock", "UpdateAlarm", inputs);
-
-            for (String variable : result.keySet()) {
-                this.onValueReceived(variable, result.get(variable), "AlarmClock");
-            }
-        }
-    }
-
-    public void setAlarm(Command command) {
-        if (command instanceof OnOffType || command instanceof OpenClosedType || command instanceof UpDownType) {
-            if (command.equals(OnOffType.ON) || command.equals(UpDownType.UP) || command.equals(OpenClosedType.OPEN)) {
-                setAlarm(true);
-            } else if (command.equals(OnOffType.OFF) || command.equals(UpDownType.DOWN)
-                    || command.equals(OpenClosedType.CLOSED)) {
-                setAlarm(false);
-            }
-        }
-    }
-
-    public void setAlarm(boolean alarmSwitch) {
-
-        List<SonosAlarm> sonosAlarms = getCurrentAlarmList();
-
-        // find the nearest alarm - take the current time from the Sonos system,
-        // not the system where we are running
-        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        fmt.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-        String currentLocalTime = getTime();
-        Date currentDateTime = null;
-        try {
-            currentDateTime = fmt.parse(currentLocalTime);
-        } catch (ParseException e) {
-            logger.error("An exception occurred while formatting a date");
-            e.printStackTrace();
-        }
-
-        if (currentDateTime != null) {
-            Calendar currentDateTimeCalendar = Calendar.getInstance();
-            currentDateTimeCalendar.setTimeZone(TimeZone.getTimeZone("GMT"));
-            currentDateTimeCalendar.setTime(currentDateTime);
-            currentDateTimeCalendar.add(Calendar.DAY_OF_YEAR, 10);
-            long shortestDuration = currentDateTimeCalendar.getTimeInMillis() - currentDateTime.getTime();
-
-            SonosAlarm firstAlarm = null;
-
-            for (SonosAlarm anAlarm : sonosAlarms) {
-                SimpleDateFormat durationFormat = new SimpleDateFormat("HH:mm:ss");
-                durationFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-                Date durationDate;
-                try {
-                    durationDate = durationFormat.parse(anAlarm.getDuration());
-                } catch (ParseException e) {
-                    logger.error("An exception occurred while parsing a date : '{}'", e.getMessage());
-                    continue;
-                }
-
-                long duration = durationDate.getTime();
-
-                if (duration < shortestDuration && anAlarm.getRoomUUID().equals(getUDN())) {
-                    shortestDuration = duration;
-                    firstAlarm = anAlarm;
-                }
-            }
-
-            // Set the Alarm
-            if (firstAlarm != null) {
-
-                if (alarmSwitch) {
-                    firstAlarm.setEnabled(true);
-                } else {
-                    firstAlarm.setEnabled(false);
-                }
-
-                updateAlarm(firstAlarm);
-
-            }
-        }
-    }
-
     public String getTime() {
-        updateTime();
+
         return stateMap.get("CurrentLocalTime");
-    }
-
-    public Boolean isAlarmRunning() {
-        return ((stateMap.get("AlarmRunning") != null) && stateMap.get("AlarmRunning").equals("1")) ? true : false;
-    }
-
-    public void snoozeAlarm(Command command) {
-        if (isAlarmRunning() && command instanceof DecimalType) {
-
-            int minutes = ((DecimalType) command).intValue();
-
-            Map<String, String> inputs = new HashMap<String, String>();
-
-            Calendar snoozePeriod = Calendar.getInstance();
-            snoozePeriod.setTimeZone(TimeZone.getTimeZone("GMT"));
-            snoozePeriod.setTimeInMillis(0);
-            snoozePeriod.add(Calendar.MINUTE, minutes);
-            SimpleDateFormat pFormatter = new SimpleDateFormat("HH:mm:ss");
-            pFormatter.setTimeZone(TimeZone.getTimeZone("GMT"));
-
-            try {
-                inputs.put("Duration", pFormatter.format(snoozePeriod.getTime()));
-            } catch (NumberFormatException ex) {
-                logger.error("Action Invalid Value Format Exception {}", ex.getMessage());
-            }
-
-            Map<String, String> result = service.invokeAction(this, "AVTransport", "SnoozeAlarm", inputs);
-
-            for (String variable : result.keySet()) {
-                this.onValueReceived(variable, result.get(variable), "AVTransport");
-            }
-        } else {
-            logger.warn("There is no alarm running on {}", getUDN());
-        }
     }
 
     public Boolean isAnalogLineInConnected() {
@@ -2714,11 +2505,6 @@ public class ZonePlayerHandler extends BaseThingHandler implements UpnpIOPartici
 
     public String getZoneGroupID() {
         return stateMap.get("LocalGroupUUID");
-    }
-
-    public String getRunningAlarmProperties() {
-        updateRunningAlarmProperties();
-        return stateMap.get("RunningAlarmProperties");
     }
 
     public String getMute() {

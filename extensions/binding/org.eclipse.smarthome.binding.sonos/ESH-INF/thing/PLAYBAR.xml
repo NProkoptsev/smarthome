@@ -10,9 +10,6 @@
 
 		<channels>
 			<channel id="add" typeId="add" />
-			<channel id="alarm" typeId="alarm" />
-			<channel id="alarmproperties" typeId="alarmproperties" />
-			<channel id="alarmrunning" typeId="alarmrunning" />
 			<channel id="control" typeId="control" />
 			<channel id="currentalbum" typeId="currentalbum" />
 			<channel id="currentalbumart" typeId="currentalbumart" />
